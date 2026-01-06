@@ -1,17 +1,28 @@
 {
-  "name": "yassi.server",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "name": "yassi-server",
+  "version": "0.0.1",
+  "description": "yassi server app",
   "type": "module",
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "express": "^5.2.1",
+    "express": "^4.22.1",
     "socket.io": "^4.8.3"
-  }
+  },
+  "scripts": {
+    "start": "node index.js",
+    "build": "npm start build"
+  },
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PFJoho/yassi_server.git"
+  },
+  "keywords": [
+    "yassi"
+  ],
+  "author": "johan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PFJoho/yassi_server/issues"
+  },
+  "homepage": "https://github.com/PFJoho/yassi_server#readme"
 }
