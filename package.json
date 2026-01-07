@@ -1,28 +1,28 @@
 {
-  "name": "yassi-server",
-  "version": "0.0.1",
-  "description": "yassi server app",
-  "type": "module",
-  "dependencies": {
-    "express": "^4.22.1",
-    "socket.io": "^4.8.3"
-  },
-  "scripts": {
-    "start": "node index.js",
-    "build": "mkdir -p dist"
-  },
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
   "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/PFJoho/yassi_server.git"
+  "scripts": {
+    "start": "tsc && node dist/index.js",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "yassi"
-  ],
-  "author": "johan",
+  "keywords": [],
+  "author": "",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/PFJoho/yassi_server/issues"
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/express": "^5.0.6",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.52.0"
   },
-  "homepage": "https://github.com/PFJoho/yassi_server#readme"
+  "dependencies": {
+    "express": "^5.2.1",
+    "http": "^0.0.1-security",
+    "socket.io": "^4.8.3"
+  }
 }
