@@ -5,6 +5,8 @@ import {defaultState} from "./gamestate"
 import  GameFunctions  from "./game"
 
 const app = express();
+app.options('*', cors());
+
 const httpServer = createServer(app);
 const io = new Server(httpServer, { 
   cors: {
@@ -112,5 +114,9 @@ function handleDisconnection(userId:any) {
     users.set(userId, count);
   }
   return count === 0;
+}
+
+function cors(): import("express-serve-static-core").RequestHandler<{}, any, any, import("qs").ParsedQs, Record<string, any>> {
+  throw new Error("Function not implemented.");
 }
 

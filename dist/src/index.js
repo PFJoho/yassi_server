@@ -12,7 +12,7 @@ const app = (0, express_1.default)();
 const httpServer = (0, http_1.createServer)(app);
 const io = new socket_io_1.Server(httpServer, {
     cors: {
-        origin: ["https://yassi.onrender.com"]
+        origin: ["https://yassi.onrender.com", "http://localhost:4200"]
     }
 });
 const PORT = 3000; //Your server port here
