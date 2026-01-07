@@ -3,19 +3,17 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import {defaultState} from "./gamestate"
 import  GameFunctions  from "./game"
-const frontend = 'http://localhost:4200' //["https://laddabilen.net"]
+const frontend = "https://laddabilen.net"; //'http://localhost:4200' //
 const app = express();
 app.use((req, res:any, next) => {
-  res.setHeader('Access-Control-Allow-Origin', )
+  res.setHeader('Access-Control-Allow-Origin' )
   next()
 })
 
 const httpServer = createServer(app);
-const io = new Server(httpServer, { 
-  cors: {
-    origin: frontend
-  }
-});
+const io = new Server(httpServer, { cors: {
+    origin: [frontend]
+  }});
 const PORT = 3000; //Your server port here
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

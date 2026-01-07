@@ -8,13 +8,16 @@ const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const gamestate_1 = require("./gamestate");
 const game_1 = __importDefault(require("./game"));
+const frontend = 'http://localhost:4200'; //["https://laddabilen.net"]
 const app = (0, express_1.default)();
-const httpServer = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(httpServer, {
-    cors: {
-        origin: ["https://yassi.onrender.com", "http://localhost:4200"]
-    }
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin');
+    next();
 });
+const httpServer = (0, http_1.createServer)(app);
+const io = new socket_io_1.Server(httpServer, { cors: {
+        origin: ["http://localhost:4200"]
+    } });
 const PORT = 3000; //Your server port here
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const users = new Map();
@@ -100,5 +103,8 @@ function handleDisconnection(userId) {
         users.set(userId, count);
     }
     return count === 0;
+}
+function cors() {
+    throw new Error("Function not implemented.");
 }
 //# sourceMappingURL=index.js.map
