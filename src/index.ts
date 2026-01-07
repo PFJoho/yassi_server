@@ -1,86 +1,22 @@
+import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import  GameFunctions  from "./game.js"
-const defaultProtocol = {
-                ones: { possibleScore: -1, player1: -1, player2: -1 },
-                twos: { possibleScore: -1, player1: -1, player2: -1 },
-                threes: { possibleScore: -1, player1: -1, player2: -1 },
-                fours: { possibleScore: -1, player1: -1, player2: -1 },
-                fives: { possibleScore: -1, player1: -1, player2: -1 },
-                sixes: { possibleScore: -1, player1: -1, player2: -1 },
-                top: { possibleScore: -1, player1: 0, player2: 0 },
-                bonus: { possibleScore: -1, player1: -1, player2: -1 },
-                pair: { possibleScore: -1, player1: -1, player2: -1 },
-                twoPairs: { possibleScore: -1, player1: -1, player2: -1 },               
-                threeOfaKind: { possibleScore: -1, player1: -1, player2: -1 },
-                fourOfaKind: { possibleScore: -1, player1: -1, player2: -1 },               
-                smallStraight: { possibleScore: -1, player1: -1, player2: -1 },
-                largeStraight: { possibleScore: -1, player1: -1, player2: -1 },             
-                fullHouse: { possibleScore: -1, player1: -1, player2: -1 },             
-                chance: { possibleScore: -1, player1: -1, player2: -1 },
-                yahtzee: { possibleScore: -1, player1: -1, player2: -1 },  
-                total: { possibleScore: -1, player1: -1, player2: -1 },           
-            }
-const defaultState =  {                
-                diceList: [
-                    { id: 1, value: 6, selected: false, enabled: false },
-                    { id: 2, value: 6, selected: false, enabled: false },
-                    { id: 3, value: 6, selected: false, enabled: false },
-                    { id: 4, value: 6, selected: false, enabled: false },
-                    { id: 5, value: 6, selected: false, enabled: false },
-                ],
-                bonusValue: 0,
-                bonusLimit: 0,
-                yatzyValue: 0,
-                nextPlayer: 0,
-                maxiYatzy: false,
-                straightYatzy: false,
-                waitingPlayerSetScore: 0,
-                scoreWasSet: false,
-                diceAreThrown: false,
-                waitingPlayerThrow: true,
-                gameOver: false,
-                playerThrows: 3,
-                playerRound: 0,                
-                gameMode: "Yassi",
-                canUndo: false,
-                newGame: false,
-                benchmarkScore: { player1: 0, player2: 0 },
-                protocol: defaultProtocol,  
-                totalScore: {player1: 0, player2: 0},
-                winner: 0              
-            };
-const server = createServer();
-const gameFunctions = new GameFunctions();
-let connections = [];
-let gameState = defaultState;
+import {defaultState} from "./gamestate"
+import  GameFunctions  from "./game"
 
-const users = new Map();
-
-function handleConnection(userId:any) {      
-    const size = users.size + 1;
-    users.set(size, userId);
-    console.log('New client connected', users);
-    return size;  
-}
-
-function handleDisconnection(userId:any) {
-  const count = users.get(userId) - 1;
-  if (count === 0) {
-    users.delete(userId);
-  } else {
-    users.set(userId, count);
-  }
-  return count === 0;
-}
-
-
-
-const io = new Server(server, {
+const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, { 
   cors: {
-    origin: ["https://yassi.onrender.com"],
+    origin: ["https://yassi.onrender.com"]
   }
 });
+const PORT = 3000; //Your server port here
+httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+const users = new Map();
+const gameFunctions = new GameFunctions();
+let gameState = defaultState;
 
 io.on('connection', (socket:any) => {
   if(!users.has(socket.id) && users.size < 2){
@@ -161,13 +97,20 @@ io.on('connection', (socket:any) => {
   });
 });
 
-const PORT = 10000; //Your server port here
-server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
+function handleConnection(userId:any) {      
+    const size = users.size + 1;
+    users.set(size, userId);
+    console.log('New client connected', users);
+    return size;  
+}
 
-
-/*
-Actions:
-throw dice
-set score
-*/
+function handleDisconnection(userId:any) {
+  const count = users.get(userId) - 1;
+  if (count === 0) {
+    users.delete(userId);
+  } else {
+    users.set(userId, count);
+  }
+  return count === 0;
+}
 
