@@ -161,7 +161,7 @@ io.on('connection', (socket:any) => {
   });
 });
 
-const PORT = 3000; //Your server port here
+const PORT = 10000; //Your server port here
 server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
 
 
