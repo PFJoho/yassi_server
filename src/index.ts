@@ -3,6 +3,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import {defaultState} from "./gamestate"
 import  GameFunctions  from "./game"
+import { defaultProtocol } from "./gamestate";
 const frontend = "https://laddabilen.net"; //'http://localhost:4200' //
 const app = express();
 app.use((req, res:any, next) => {
@@ -19,7 +20,8 @@ httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const users = new Map();
 const gameFunctions = new GameFunctions();
-let gameState = defaultState;
+let gameState = defaultState();
+
 
 io.on('connection', (socket:any) => {
   if(!users.has(socket.id) && users.size < 2){
@@ -62,7 +64,7 @@ io.on('connection', (socket:any) => {
       if(res.playerThrows === 0){
         res.waitingPlayerSetScore = playerId;
       }
-
+      
       io.emit('alea jacta est', res);
 
       setTimeout(() => {
@@ -70,6 +72,13 @@ io.on('connection', (socket:any) => {
         io.emit('update state', res);
       }, 1000)
       
+   })
+
+   socket.on('chat out', (msg:any) => {
+           
+      io.emit('chat in', {
+        msg
+      });
    })
 
    socket.on('select dice', (msg:any) => {      

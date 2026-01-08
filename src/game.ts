@@ -54,22 +54,20 @@ export default class GameFunctions {
 
         const values = Object.values(counts);
         const uniqueDice = Object.keys(counts).map(Number).sort((a, b) => a - b);
-        const newCombos = { ...gameState.protocol };
+        const newCombos = gameState.protocol;
         const smallRegex = /(?=.*1)(?=.*2)(?=.*3)(?=.*4)(?=.*5)/;
         const largeRegex = /(?=.*6)(?=.*2)(?=.*3)(?=.*4)(?=.*5)/;
         // Score for each number (1 to 6)
-        const numDice = 7;
-
-        for (let i = 1; i < numDice; i++) {
-            const numberText = this.numberToText(i);
-
+        
+        for (const prop in counts) {
+           const numberText = this.numberToText(Number(prop));
+                console.log("protoprop", newCombos[numberText])
+                console.log("score",  Number(prop) * counts[prop])
             if (newCombos[numberText][player] === -1) {
-                const score:any = this.diceScore(counts, i);
-                if (score > 0) {
-                    newCombos[numberText]["possibleScore"] = score[0];
-                }
+                newCombos[numberText]["possibleScore"] = Number(prop) * counts[prop];
             }
-        }
+
+        } 
 
         // Two Pairs
         if (values.filter(v => v === 2).length >= 2 && newCombos.twoPairs[player] === -1) {
@@ -190,8 +188,7 @@ export default class GameFunctions {
                     let score = Number(property) * val;
                     numbers.push(score);
                 }
-            }
-       
+            }        
         return numbers;
 
     }
