@@ -3,8 +3,18 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import {defaultState} from "./gamestate"
 import  GameFunctions  from "./game"
-import { defaultProtocol } from "./gamestate";
-const frontend = "https://laddabilen.net"; //'http://localhost:4200' //
+import 'dotenv/config'
+
+//require('dotenv').config();
+require('dotenv').config({path:__dirname+'/./../../.env'})
+const port = process.env.PORT || 3000;
+console.log(process.env.PORT);
+
+let frontend = process.env.FRONTEND_URI_DEVELOPMENT;
+if(process.env.STATUS === 'production'){
+  frontend = process.env.FRONTEND_URI_PRODUCTION;
+}
+console.log(frontend);
 const app = express();
 app.use((req, res:any, next) => {
   res.setHeader('Access-Control-Allow-Origin' )
@@ -91,6 +101,7 @@ io.on('connection', (socket:any) => {
    })
 
    socket.on('set score', (msg:any) => { 
+    console.log(msg);
       let gameState = msg.state;
       const playerId = msg.playerId;
       const inputId = msg.inputId;

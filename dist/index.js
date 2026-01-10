@@ -8,7 +8,16 @@ const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const gamestate_1 = require("./gamestate");
 const game_1 = __importDefault(require("./game"));
-const frontend = 'http://localhost:4200'; //"https://laddabilen.net"; //
+require("dotenv/config");
+//require('dotenv').config();
+require('dotenv').config({ path: __dirname + '/./../../.env' });
+const port = process.env.PORT || 3000;
+console.log(process.env.PORT);
+let frontend = process.env.FRONTEND_URI_DEVELOPMENT;
+if (process.env.STATUS === 'production') {
+    frontend = process.env.FRONTEND_URI_PRODUCTION;
+}
+console.log(frontend);
 const app = (0, express_1.default)();
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin');
