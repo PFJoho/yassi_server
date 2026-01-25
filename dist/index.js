@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
-const gamestate_1 = require("./gamestate");
 const game_1 = __importDefault(require("./game"));
 require("dotenv/config");
 //require('dotenv').config();
@@ -24,14 +23,16 @@ app.use((req, res, next) => {
     next();
 });
 const httpServer = (0, http_1.createServer)(app);
-const io = new socket_io_1.Server(httpServer, { cors: {
+const io = new socket_io_1.Server(httpServer, {
+    cors: {
         origin: [frontend]
-    } });
+    }
+});
 const PORT = 3000; //Your server port here
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const users = new Map();
 const gameFunctions = new game_1.default();
-let gameState = (0, gamestate_1.defaultState)();
+let gameState = gameFunctions.defaultState();
 io.on('connection', (socket) => {
     if (!users.has(socket.id) && users.size < 2) {
         const userId = handleConnection(socket.id);
@@ -63,16 +64,17 @@ io.on('connection', (socket) => {
     socket.on('throw dice', (msg) => {
         let gameState = msg.state;
         const playerId = msg.player;
-        let res = gameFunctions.rollAllDice(gameState, playerId);
-        res.diceAreThrown = true;
-        if (res.playerThrows === 0) {
-            res.waitingPlayerSetScore = playerId;
+        gameState.nextPlayer = playerId;
+        gameState.diceAreThrown = true;
+        gameState = gameFunctions.rollAllDice(gameState);
+        gameState.playerThrows = gameState.playerThrows - 1;
+        const lastThrow = gameState.playerThrows == 0;
+        gameState = gameFunctions.evaluateDiceResult(gameState);
+        console.log(gameState.protocol);
+        if (gameState.playerThrows === 0) {
+            gameState.waitingPlayerSetScore = playerId;
         }
-        io.emit('alea jacta est', res);
-        setTimeout(() => {
-            res.diceAreThrown = false;
-            io.emit('update state', res);
-        }, 1000);
+        io.emit('alea jacta est', gameState);
     });
     socket.on('chat out', (msg) => {
         io.emit('chat in', {
@@ -91,11 +93,11 @@ io.on('connection', (socket) => {
         const playerId = msg.playerId;
         const inputId = msg.inputId;
         const score = msg.score;
-        let res = gameFunctions.setScore(gameState, playerId, inputId, score);
-        res.diceAreThrown = false;
-        res.waitingPlayerThrow = true;
-        res.waitingPlayerSetScore = 0;
-        io.emit('update state', res);
+        console.log("inputid", inputId);
+        gameState = gameFunctions.setScore(gameState, inputId, score, playerId);
+        gameState.diceAreThrown = false;
+        gameState.waitingPlayerThrow = true;
+        io.emit('update state', gameState);
     });
     // Handle client disconnection
     socket.on('disconnect', () => {
