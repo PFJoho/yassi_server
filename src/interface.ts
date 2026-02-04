@@ -66,9 +66,11 @@ export interface GameState {
   canUndo: boolean;
   newGame: boolean;
   protocol:Combo;
+  roomName:string;
   totalScore:DefaultScore;
   winner: number;
   winningScore:number;
+  yahtzyFest: boolean
 }
 
 export enum GameMode {

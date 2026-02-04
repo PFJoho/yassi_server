@@ -5,31 +5,44 @@ class GameFunctions {
     constructor() {
         this.players = ["player1", "player2", "player3", "player4"];
     }
-    rollAllDice(state) {
-        let gameState = state;
+    rollAllDice(gameState) {
+        gameState.playerThrows = gameState.playerThrows - 1;
+        const lastThrow = gameState.playerThrows == 0;
         gameState.diceList = gameState.diceList.map((d) => { d.enabled = true; return d; });
         for (const prop in gameState.protocol) {
             gameState.protocol[prop].possibleScore = 0;
         }
-        gameState.diceList = this.getRandomDice(gameState.diceList);
+        let diceList = this.getRandomDice(gameState.diceList);
         console.log('Rolling all dice...');
+        gameState.diceList = diceList;
+        gameState.waitingPlayerThrow = false;
+        gameState.diceAreThrown = true;
         return gameState;
     }
-    getRandomDice(diceList) {
-        let diceListObj = diceList;
+    getRandomDice(diceListObj) {
         diceListObj = diceListObj.map((d, ix) => {
             if (!d.selected) {
-                let randomNumber = Math.random();
-                const min = Math.ceil(1);
-                const max = Math.floor(6);
-                d.value = Math.floor(randomNumber * (max - min + 1)) + min;
+                const minCeiled = Math.ceil(1);
+                const maxFloored = Math.floor(6);
+                d.value = Math.floor(Math.random() * (maxFloored - minCeiled + 1) + minCeiled);
             }
             return d;
         });
+        // diceListObj = diceListObj.map((d: any, ix: number) => {
+        //     if (ix < 3) {
+        //         d.value = 6;
+        //     } if (ix > 2) {
+        //         d.value = 5;
+        //         // } else if(ix > 3) {
+        //         //     d.value = 4;
+        //     }
+        //     return d;
+        // })
         return diceListObj;
     }
     evaluateDiceResult(gameState) {
         const player = this.players[gameState.nextPlayer - 1];
+        console.log("player", gameState.nextPlayer);
         let dice = gameState.diceList;
         const counts = dice.reduce((acc, d) => {
             acc[d.value] = (acc[d.value] || 0) + 1;
@@ -47,58 +60,30 @@ class GameFunctions {
                 newCombos[numberText]["possibleScore"] = Number(prop) * counts[prop];
             }
         }
-        // Chance (Total value of all dice)
-        if (newCombos.chance[player] === -1) {
-            const total = dice.reduce((sum, d) => sum + d.value, 0);
-            newCombos.chance.possibleScore = total;
-        }
-        // Two Pairs
-        if (values.filter(v => v === 2).length >= 2 && newCombos.twoPairs[player] === -1) {
-            const res = this.diceScore(counts, 2);
-            newCombos.twoPairs.possibleScore = res[0] + res[1]; // Sum of two pairs      
-        }
-        // Three Pairs
-        if (values.filter(v => v === 2).length === 3 && newCombos.threePairs[player] === -1) {
-            const res = this.diceScore(counts, 2);
-            newCombos.threePairs.possibleScore = res[0] + res[1] + res[2]; // Sum of two pairs      
-        }
         if (values.includes(6)) {
-            newCombos.yahtzee[player] = newCombos.yahtzee[player] === 0 ? gameState.yassiValue : 0;
+            newCombos.yahtzee.possibleScore = newCombos.yahtzee[player] === -1 ? gameState.yassiValue : 0;
             const diceval = dice.reduce((sum, d) => sum + d.value, 0) / 6;
-            newCombos.fourOfaKind.possibleScore = newCombos.fiveOfaKind[player] === -1 ? diceval * 5 : 0;
+            newCombos.fiveOfaKind.possibleScore = newCombos.fiveOfaKind[player] === -1 ? diceval * 5 : 0;
             newCombos.fourOfaKind.possibleScore = newCombos.fourOfaKind[player] === -1 ? diceval * 4 : 0;
             newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? diceval * 3 : 0;
-            newCombos.pair.possibleScore = newCombos.pair[player] === -1 ? diceval * 2 : 0;
+            if (newCombos.pair[player] === -1) {
+                newCombos.pair.possibleScore = this.diceScore(counts, 6)[0] / 6 * 2;
+            }
         }
-        if (values.includes(5) && gameState.gameMode !== interface_1.GameMode.Maxi) {
-            newCombos.yahtzee.possibleScore = newCombos.yahtzee[player] === -1 ? 50 : 0;
+        else if (values.includes(5) && gameState.gameMode !== interface_1.GameMode.Maxi) {
+            newCombos.yahtzee.possibleScore = newCombos.yahtzee[player] === -1 ? gameState.yassiValue : 0;
             newCombos.fourOfaKind.possibleScore = newCombos.fourOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] / 5 * 4 : 0;
             newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] / 5 * 3 : 0;
-            newCombos.pair.possibleScore = newCombos.pair[player] === -1 ? this.diceScore(counts, 4)[0] / 2 : 0;
-        }
-        if (values.includes(5) && gameState.gameMode === interface_1.GameMode.Maxi) {
-            newCombos.fiveOfaKind[player] = newCombos.fiveOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] : 0;
-            newCombos.fourOfaKind.possibleScore = newCombos.fourOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] : 0;
-            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] / 4 * 3 : 0;
-            newCombos.pair.possibleScore = newCombos.pair[player] === -1 ? this.diceScore(counts, 4)[0] / 2 : 0;
-        }
-        if (values.includes(3) && values.includes(2)) {
-            newCombos.fullHouse.possibleScore = newCombos.fullHouse[player] === -1 ? this.diceScore(counts, 3)[0] + this.diceScore(counts, 2)[0] : 0;
-            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 3)[0] : 0;
-            newCombos.twoPairs.possibleScore = newCombos.twoPairs[player] === -1 ? this.diceScore(counts, 3)[0] / 3 * 2 + this.diceScore(counts, 2)[0] : 0;
             if (newCombos.pair[player] === -1) {
-                const pair1 = this.diceScore(counts, 3)[0] / 3 * 2;
-                newCombos.pair.possibleScore = Math.max(pair1, this.diceScore(counts, 2)[0]);
-            } //kåk 3+3
+                newCombos.pair.possibleScore = this.diceScore(counts, 5)[0] / 5 * 2;
+            }
         }
-        else if (values.includes(4) && values.includes(2)) {
-            newCombos.fullHouse3.possibleScore = newCombos.fullHouse3[player] === -1 ? this.diceScore(counts, 4)[0] + this.diceScore(counts, 2)[0] : 0;
-            newCombos.fourOfaKind.possibleScore = newCombos.fourOfaKind[player] === -1 ? this.diceScore(counts, 4)[0] : 0;
-            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 3)[0] : 0;
-            newCombos.twoPairs.possibleScore = newCombos.twoPairs[player] === -1 ? this.diceScore(counts, 3)[0] / 3 * 2 + this.diceScore(counts, 2)[0] : 0;
+        else if (values.includes(5) && gameState.gameMode === interface_1.GameMode.Maxi) {
+            newCombos.fiveOfaKind.possibleScore = newCombos.fiveOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] : 0;
+            newCombos.fourOfaKind.possibleScore = newCombos.fourOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] / 5 * 4 : 0;
+            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 5)[0] / 5 * 3 : 0;
             if (newCombos.pair[player] === -1) {
-                const pair1 = this.diceScore(counts, 3)[0] / 3 * 2;
-                newCombos.pair[player] = Math.max(pair1, this.diceScore(counts, 2)[0]);
+                newCombos.pair.possibleScore = this.diceScore(counts, 5)[0] / 5 * 2;
             }
         }
         else if (values.includes(4)) {
@@ -110,8 +95,54 @@ class GameFunctions {
             newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 3)[0] : 0;
             newCombos.pair.possibleScore = newCombos.pair[player] === -1 ? this.diceScore(counts, 3)[0] / 3 * 2 : 0;
         }
-        else if (values.includes(2) && newCombos.pair[player] === -1) {
-            newCombos.pair.possibleScore = Math.max(...this.diceScore(counts, 2));
+        else if (values.includes(2)) {
+            const best = Math.max(...this.diceScore(counts, 2));
+            newCombos.pair.possibleScore = newCombos.pair[player] === -1 ? best : 0;
+        }
+        if (values.includes(3) && values.includes(2)) {
+            newCombos.fullHouse.possibleScore = newCombos.fullHouse[player] === -1 ? this.diceScore(counts, 3)[0] + this.diceScore(counts, 2)[0] : 0;
+            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 3)[0] : 0;
+            newCombos.twoPairs.possibleScore = newCombos.twoPairs[player] === -1 ? this.diceScore(counts, 3)[0] / 3 * 2 + this.diceScore(counts, 2)[0] : 0;
+            if (newCombos.pair[player] === -1) {
+                const pair1 = this.diceScore(counts, 3)[0] / 3 * 2;
+                newCombos.pair.possibleScore = Math.max(pair1, this.diceScore(counts, 2)[0] || 0);
+            } //kåk 3+3
+        }
+        else if (values.includes(4) && values.includes(2)) {
+            newCombos.fullHouse3.possibleScore = newCombos.fullHouse3[player] === -1 ? this.diceScore(counts, 4)[0] + this.diceScore(counts, 2)[0] : 0;
+            newCombos.fullHouse.possibleScore = newCombos.fullHouse[player] === -1 ? this.diceScore(counts, 4)[0] / 4 * 3 + this.diceScore(counts, 2)[0] : 0;
+            newCombos.fourOfaKind.possibleScore = newCombos.fourOfaKind[player] === -1 ? this.diceScore(counts, 4)[0] : 0;
+            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? this.diceScore(counts, 4)[0] / 4 * 3 : 0;
+            newCombos.twoPairs.possibleScore = newCombos.twoPairs[player] === -1 ? this.diceScore(counts, 4)[0] / 4 * 2 + this.diceScore(counts, 2)[0] : 0;
+            if (newCombos.pair[player] === -1) {
+                const pair1 = this.diceScore(counts, 4)[0] / 4 * 2;
+                newCombos.pair.possibleScore = Math.max(pair1, this.diceScore(counts, 2)[0] || 0);
+            }
+        }
+        else if (values[0] === 3 && values[1] === 3) {
+            const three = this.diceScore(counts, 3)[0];
+            const bestthree = Math.max(three, this.diceScore(counts, 3)[1]);
+            const lowthree = Math.min(this.diceScore(counts, 3)[0], this.diceScore(counts, 3)[1]);
+            newCombos.fullHouse2.possibleScore = newCombos.fullHouse2[player] === -1 ? bestthree + lowthree : 0;
+            newCombos.fullHouse.possibleScore = newCombos.fullHouse[player] === -1 ? bestthree + (lowthree / 3 * 2) : 0;
+            newCombos.threeOfaKind.possibleScore = newCombos.threeOfaKind[player] === -1 ? bestthree : 0;
+            newCombos.twoPairs.possibleScore = newCombos.twoPairs[player] === -1 ? (bestthree / 3 * 2) + (lowthree / 3 * 2) : 0;
+            if (newCombos.pair[player] === -1) {
+                newCombos.pair.possibleScore = bestthree / 3 * 2;
+            }
+        }
+        if (values.filter(v => v === 2).length === 3 && newCombos.threePairs[player] === -1) {
+            const res = this.diceScore(counts, 2);
+            newCombos.threePairs.possibleScore = res[0] + res[1] + res[2]; // Sum of two pairs      
+        }
+        // Two Pairs
+        if (values.filter(v => v === 2).length >= 2 && newCombos.twoPairs[player] === -1) {
+            const len = values.filter(v => v === 2).length;
+            const best = Math.max(...this.diceScore(counts, 2));
+            let nextbest = 0;
+            this.diceScore(counts, 2).forEach((s) => { if (s < best && s > nextbest)
+                nextbest = s; });
+            newCombos.twoPairs.possibleScore = best + nextbest;
         }
         // Small Straight (1-5)
         if (uniqueDice.join('').match(smallRegex) && newCombos.smallStraight[player] === -1) {
@@ -123,7 +154,12 @@ class GameFunctions {
         }
         // Full Straight (1-6)
         if (uniqueDice.join('') === '123456' && newCombos.fullStraight[player] === -1) {
-            newCombos.fullStraight[player] = 25;
+            newCombos.fullStraight.possibleScore = 25;
+        }
+        // Chance (Total value of all dice)
+        if (newCombos.chance[player] === -1) {
+            const total = dice.reduce((sum, d) => sum + d.value, 0);
+            newCombos.chance.possibleScore = total;
         }
         if (gameState.gameMode === interface_1.GameMode.Straight) {
             const round = gameState.playerRound < 6 ? gameState.playerRound + 1 : gameState.playerRound + 3;
@@ -151,35 +187,36 @@ class GameFunctions {
         const newcombo = this.numberToText(inputId);
         const player = this.players[playerId - 1];
         gameState.diceList = gameState.diceList.map((d) => { d.enabled = false; d.selected = false; return d; });
-        gameState.gameOver = gameState.playerRound >= gameState.numberOfRounds;
         if (gameState.playerRound <= gameState.numberOfRounds) {
             gameState.protocol[newcombo][player] = score;
             gameState.totalScore[player] += score;
+            gameState.yahtzyFest = newcombo === "yahtzee";
         }
         for (const property in gameState.protocol) {
             gameState.protocol[property]['possibleScore'] = -1;
         }
+        console.log("gamemode", gameState.gameMode);
+        console.log("input id", inputId);
         if (inputId > 0 && inputId < 7) {
             gameState.benchmarkScore[player] = gameState.benchmarkScore[player] + (gameState.gameMode * inputId);
         }
         gameState = this.calculateScores(gameState, playerId, player);
         if (gameState.gameMode === interface_1.GameMode.Maxi) {
             gameState.savedThrows[player] = (gameState.playerThrows);
-            const nexttoplay = gameState.nextPlayer === gameState.numberOfPlayers ? 1 : gameState.nextPlayer + 1;
-            if (nexttoplay !== inputId) {
-                let next = this.players[nexttoplay - 1];
-                gameState.playerThrows = gameState.savedThrows[next] + 3;
+            if (gameState.nextPlayer === 1) {
+                gameState.playerThrows = gameState.savedThrows["player2"] + 3;
             }
             else {
-                gameState.playerThrows = gameState.savedThrows[player] + 3;
+                gameState.playerThrows = gameState.savedThrows["player1"] + 3;
             }
         }
         else {
             gameState.playerThrows = 3;
         }
-        gameState.nextPlayer = gameState.nextPlayer === gameState.numberOfPlayers ? 1 : gameState.nextPlayer += 1;
-        if (playerId === gameState.numberOfPlayers) {
+        gameState.nextPlayer = gameState.nextPlayer === 1 ? 2 : 1;
+        if (gameState.nextPlayer === 1) {
             gameState.playerRound += 1;
+            gameState.gameOver = gameState.playerRound >= gameState.numberOfRounds;
         }
         return gameState;
     }
@@ -205,8 +242,8 @@ class GameFunctions {
             if (s > 0)
                 inputs.top[player] += s;
         });
-        // inputMap.delete("top");
-        // inputMap.delete("total");
+        inputMap.delete("top");
+        inputMap.delete("total");
         // Calculate bonus (if topSixSum >= 63 or 84, bonus is 50)
         const topIsNotFull = topSixSum.find((i) => i === -1);
         const prevBonus = gameState.protocol.bonus[player];
@@ -227,7 +264,7 @@ class GameFunctions {
                 totalScore += i[player];
             }
         });
-        inputs.total[player] = totalScore - inputs.top;
+        inputs.total[player] = totalScore;
         let winningScore = 0;
         let winner = 0;
         this.players.forEach((p, ix) => {
@@ -236,7 +273,7 @@ class GameFunctions {
                 winner = ix + 1;
             }
         });
-        if (gameState.gameOver === true) {
+        if (gameState.gameOver) {
             gameState.winner = winner;
             gameState.winningScore = winningScore;
         }
@@ -267,6 +304,96 @@ class GameFunctions {
             case 'maxiYahtzee': return 22;
             default: return 0;
         }
+    }
+    getGameState(numberOfPlayers) {
+        let defaultScoreObj = { player1: 0 };
+        switch (numberOfPlayers) {
+            case 2:
+                defaultScoreObj = { player1: 0, player2: 0 };
+                break;
+            case 3:
+                defaultScoreObj = { player1: 0, player2: 0, player3: 0 };
+                break;
+            case 4:
+                defaultScoreObj = { player1: 0, player2: 0, player3: 0, player4: 0 };
+                break;
+            default:
+                break;
+        }
+        let gs = {
+            diceList: [
+                { id: 1, value: 6, selected: false, enabled: false },
+                { id: 2, value: 6, selected: false, enabled: false },
+                { id: 3, value: 6, selected: false, enabled: false },
+                { id: 4, value: 6, selected: false, enabled: false },
+                { id: 5, value: 6, selected: false, enabled: false },
+                { id: 6, value: 6, selected: false, enabled: false }
+            ],
+            bonusValue: 0,
+            bonusLimit: 0,
+            yassiValue: 0,
+            numberOfRounds: 15,
+            numberOfPlayers: numberOfPlayers,
+            nextPlayer: 1,
+            multiplayer: false,
+            gameMode: interface_1.GameMode.Regular,
+            waitingPlayerSetScore: false,
+            scoreWasSet: false,
+            diceAreThrown: false,
+            waitingPlayerThrow: true,
+            gameOver: false,
+            playerThrows: 3,
+            playerRound: 0,
+            savedThrows: Object.assign({ possibleScore: -1, player1: 0, player2: 0, player3: 0, player4: 0 }, defaultScoreObj),
+            canUndo: false,
+            newGame: false,
+            benchmarkScore: Object.assign({}, defaultScoreObj),
+            protocol: this.createProtoCol(),
+            roomName: "",
+            totalScore: Object.assign({}, defaultScoreObj),
+            winner: 0,
+            winningScore: 0,
+            yahtzyFest: false
+        };
+        gs.protocol.top.player1 = 0;
+        gs.benchmarkScore.possibleScore = 0;
+        return gs;
+    }
+    createProtoCol() {
+        return {
+            ones: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            twos: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            threes: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fours: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fives: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            sixes: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            top: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            bonus: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            pair: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            twoPairs: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            threePairs: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            threeOfaKind: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fourOfaKind: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fiveOfaKind: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            smallStraight: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            largeStraight: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fullStraight: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fullHouse: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fullHouse2: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            fullHouse3: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            yahtzee: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            chance: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+            total: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
+        };
+    }
+    prepareGameOver(state) {
+        state.gameOver = true;
+        const valuesArray = Object.values(state.totalScore); // [4, 0.5, 0.35, 5]
+        const maxValue = Math.max(...valuesArray);
+        const winners = valuesArray.map((v, ix) => { return { player: ix + 1, score: v }; }).filter((wo) => wo.score === maxValue);
+        state.winningScore = maxValue;
+        state.winner = winners[0].player;
+        return state;
     }
     numberToText(num) {
         switch (num) {
@@ -309,42 +436,6 @@ class GameFunctions {
             case 21:
                 return 'chance';
             case 22:
-                return 'yahtzee';
-            default:
-                return 'unknown';
-        }
-    }
-    roundToText(num) {
-        switch (num) {
-            case 1:
-                return 'ones';
-            case 2:
-                return 'twos';
-            case 3:
-                return 'threes';
-            case 4:
-                return 'fours';
-            case 5:
-                return 'fives';
-            case 6:
-                return 'sixes';
-            case 9:
-                return 'pair';
-            case 10:
-                return 'twoPairs';
-            case 11:
-                return 'threeOfaKind';
-            case 12:
-                return 'fourOfaKind';
-            case 13:
-                return 'smallStraight';
-            case 14:
-                return 'largeStraight';
-            case 15:
-                return 'fullHouse';
-            case 16:
-                return 'chance';
-            case 17:
                 return 'yahtzee';
             default:
                 return 'unknown';
@@ -402,70 +493,52 @@ class GameFunctions {
                 return { name: "", id: -1 };
         }
     }
-    defaultState() {
-        let defaultScoreObj = { player1: 0, player2: 0, player3: 0, player4: 0 };
-        let gs = {
-            diceList: [
-                { id: 1, value: 6, selected: false, enabled: false },
-                { id: 2, value: 6, selected: false, enabled: false },
-                { id: 3, value: 6, selected: false, enabled: false },
-                { id: 4, value: 6, selected: false, enabled: false },
-                { id: 5, value: 6, selected: false, enabled: false }
-            ],
-            bonusValue: 50,
-            bonusLimit: 63,
-            yassiValue: 50,
-            numberOfRounds: 15,
-            numberOfPlayers: 2,
-            nextPlayer: 1,
-            multiplayer: true,
-            gameMode: interface_1.GameMode.Regular,
-            waitingPlayerSetScore: false,
-            scoreWasSet: false,
-            diceAreThrown: false,
-            waitingPlayerThrow: true,
-            gameOver: false,
-            playerThrows: 3,
-            playerRound: 0,
-            savedThrows: Object.assign({ possibleScore: -1, player1: 0, player2: 0, player3: 0, player4: 0 }, defaultScoreObj),
-            canUndo: false,
-            newGame: false,
-            benchmarkScore: Object.assign({}, defaultScoreObj),
-            protocol: this.createProtoCol(),
-            totalScore: Object.assign({}, defaultScoreObj),
-            winner: 0,
-            winningScore: 0
-        };
-        gs.protocol.top.player1 = 0;
-        gs.benchmarkScore.possibleScore = 0;
-        return gs;
+    roundToText(num) {
+        switch (num) {
+            case 1:
+                return 'ones';
+            case 2:
+                return 'twos';
+            case 3:
+                return 'threes';
+            case 4:
+                return 'fours';
+            case 5:
+                return 'fives';
+            case 6:
+                return 'sixes';
+            case 9:
+                return 'pair';
+            case 10:
+                return 'twoPairs';
+            case 11:
+                return 'threeOfaKind';
+            case 12:
+                return 'fourOfaKind';
+            case 13:
+                return 'smallStraight';
+            case 14:
+                return 'largeStraight';
+            case 15:
+                return 'fullHouse';
+            case 16:
+                return 'chance';
+            case 17:
+                return 'yahtzee';
+            default:
+                return 'unknown';
+        }
     }
-    createProtoCol() {
-        return {
-            ones: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            twos: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            threes: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fours: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fives: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            sixes: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            top: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            bonus: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            pair: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            twoPairs: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            threePairs: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            threeOfaKind: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fourOfaKind: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fiveOfaKind: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            smallStraight: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            largeStraight: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fullStraight: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fullHouse: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fullHouse2: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            fullHouse3: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            yahtzee: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            chance: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-            total: { possibleScore: -1, player1: -1, player2: -1, player3: -1, player4: -1 },
-        };
+    setGameType(gameState) {
+        const gameMode = gameState.gameMode;
+        gameState.bonusLimit = gameMode === interface_1.GameMode.Maxi ? 84 : gameMode === interface_1.GameMode.Straight ? 42 : 63;
+        gameState.bonusValue = gameMode === interface_1.GameMode.Maxi ? 100 : gameMode === interface_1.GameMode.Straight ? 25 : 50;
+        gameState.yassiValue = gameMode === interface_1.GameMode.Maxi ? 100 : 50;
+        gameState.numberOfRounds = gameMode === interface_1.GameMode.Maxi ? 20 : 15;
+        gameState.benchmarkScore = { possibleScore: -1, player1: 0, player2: 0, player3: 0, player4: 0 };
+        if (gameMode !== interface_1.GameMode.Maxi)
+            gameState.diceList = gameState.diceList.slice(0, 5);
+        return gameState;
     }
 }
 exports.default = GameFunctions;

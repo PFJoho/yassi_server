@@ -1,21 +1,19 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import { defaultState } from "./gamestate"
 import GameFunctions from "./game"
 import 'dotenv/config'
-import { GameState } from "./interface";
+import { Socket } from "dgram";
 
 //require('dotenv').config();
 require('dotenv').config({ path: __dirname + '/./../../.env' })
 const port = process.env.PORT || 3000;
-console.log(process.env.PORT);
-
+let rooms = [];
 let frontend = process.env.FRONTEND_URI_DEVELOPMENT;
 if (process.env.STATUS === 'production') {
   frontend = process.env.FRONTEND_URI_PRODUCTION;
 }
-console.log(frontend);
+
 const app = express();
 app.use((req, res: any, next) => {
   res.setHeader('Access-Control-Allow-Origin')
@@ -33,69 +31,65 @@ httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const users = new Map();
 const gameFunctions = new GameFunctions();
-let gameState = gameFunctions.defaultState();
+let gameState = gameFunctions.getGameState(2);
 
 
-io.on('connection', (socket: any) => {
-  if (!users.has(socket.id) && users.size < 2) {
-    const userId = handleConnection(socket.id);
-    socket.userId = userId;
-    socket.emit("private message", {
-      userId,
-      to: socket.id
-    });
-  } else {
-    socket.disconnect();
+io.on('connection', (socket: any) => { 
+  let welcomeObject = { msg: "", gameState: gameState, initials: ["aa", "bb"] };
+  
+  let roomarray = rooms.map((r) =>  {return {name: r.name}});
+  
+  if(roomarray.length === 0){
+    roomarray = [{name:"empty"}];
   }
 
-  gameState.nextPlayer = 1;
-
-  let welcomeObject = { player: socket.id, msg: "", gameState: gameState };
-
-  io.emit('welcome', welcomeObject);
-
+  socket.emit("lobby info", roomarray);
+    
   // Listen for a message from the client
   socket.on('incoming', (msg: any) => {
-    switch (msg) {
-      case "all set":
-        io.emit('start message', 'OK');
+    const text = msg.msg;
+    console.log("incoming", msg, rooms);
+    switch (text) {
+      case "ready":
+        let roomobj = rooms.find((r) => r.room === msg.room);       
+        welcomeObject.msg = 'OK';
+        welcomeObject.initials = [...roomobj.initials];
+
+        io.to(msg.room).emit('welcome', welcomeObject);
+        rooms = rooms.filter((r) => r.room !== msg.room);
         break;
       case "zebra":
         io.emit('message', "någon sa zebra");
         break
       default:
-        io.emit('message', `någon sa ${msg}`);
+        io.emit('message', `någon sa ${text}`);
     }
   });
 
   socket.on('throw dice', (msg: any) => {
     let gameState = msg.state;
     const playerId = msg.player;
+    let roomName = gameState.roomName;
     gameState.nextPlayer = playerId;
     gameState.diceAreThrown = true;
     gameState = gameFunctions.rollAllDice(gameState);    
-    gameState.playerThrows = gameState.playerThrows - 1;
     const lastThrow = gameState.playerThrows == 0;
     gameState = gameFunctions.evaluateDiceResult(gameState);
-    console.log(gameState.protocol);
     if (gameState.playerThrows === 0) {
       gameState.waitingPlayerSetScore = playerId;
-    }   
-
-    io.emit('alea jacta est', gameState);
-
+    }
+    io.to(roomName).emit('alea jacta est', gameState);
   })
 
   socket.on('chat out', (msg: any) => {
-
-    io.emit('chat in', {
+    
+    io.to(msg.room).emit('chat in', {
       msg
     });
   })
 
   socket.on('select dice', (msg: any) => {
     const socketId = users.get(msg.otherId);
-    console.log(socketId);
     io.emit("player select", {
       msg
     });
@@ -103,12 +97,12 @@ io.on('connection', (socket: any) => {
   })
 
   socket.on('set score', (msg: any) => {
-    
+
     let gameState = msg.state;
     const playerId = msg.playerId;
     const inputId = msg.inputId;
     const score = msg.score;
-    console.log("inputid", inputId);
+
     gameState = gameFunctions.setScore(gameState, inputId, score, playerId);
 
     gameState.diceAreThrown = false;
@@ -117,30 +111,69 @@ io.on('connection', (socket: any) => {
 
   })
 
+  socket.on('my name is', (msg: string) => {
+    socket.playerName = msg;
+  })
+
+  socket.on('enter lobby', (msg: any) => {
+    console.log("Welcome to the lobby!", msg);
+    const res = lobbyManager(socket, msg.room, msg.initials);
+  })
+
   // Handle client disconnection
   socket.on('disconnect', () => {
-    users.delete(socket.userId)
+    handleDisconnection(socket.id)
   });
 });
 
 function handleConnection(userId: any) {
   const size = users.size + 1;
   users.set(size, userId);
-  console.log('New client connected', users);
   return size;
 }
 
-function handleDisconnection(userId: any) {
-  const count = users.get(userId) - 1;
-  if (count === 0) {
-    users.delete(userId);
-  } else {
-    users.set(userId, count);
-  }
-  return count === 0;
+function handleDisconnection(id) {
+  console.log("Disconnect? WHY?!?");
+  rooms = rooms.filter((r) => r.playerId !== id);
 }
 
 function cors(): import("express-serve-static-core").RequestHandler<{}, any, any, import("qs").ParsedQs, Record<string, any>> {
   throw new Error("Function not implemented.");
 }
+
+function lobbyManager(socket: any, room, playerInits) {
+  let roomobj = rooms.find((r) => r.name === room);
+  console.log("roomobj", roomobj);
+ 
+  gameState.gameMode = room === "maxi" ? 4: room === "straight" ? 2:3;
+  gameState.numberOfPlayers = 2;
+  gameState = gameFunctions.setGameType(gameState)
+  gameState.diceAreThrown = false;
+  
+  if (!roomobj) {
+    const randomRoom = `${room}_${Math.floor(Math.random() * 10000)}`
+    let initarr =  [playerInits] ;
+    roomobj = { room: randomRoom, name: room, playerId: socket.id, initials: initarr};
+    rooms.push(roomobj);    
+    gameState.roomName = randomRoom;
+    roomobj.player = socket;    
+    socket.join(roomobj.room);
+   
+    console.log("Player 1 has joined lobby", randomRoom);
+    socket.emit('lobby entered', {
+      msg: "player1 ready",
+      state: gameState,            
+    })
+  } else {
+    socket.join(roomobj.room);
+    roomobj.initials.push(playerInits);
+    gameState.roomName = roomobj.room;    
+    console.log("Player 2 has joined lobby")
+    socket.emit('lobby entered', {
+      msg: "player2 ready",      
+      state: gameState,      
+    })
+  }
+}
+
 
