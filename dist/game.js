@@ -190,7 +190,7 @@ class GameFunctions {
         if (gameState.playerRound <= gameState.numberOfRounds) {
             gameState.protocol[newcombo][player] = score;
             gameState.totalScore[player] += score;
-            gameState.yahtzyFest = newcombo === "yahtzee";
+            gameState.yahtzyFest = newcombo === "yahtzee" && score > 0;
         }
         for (const property in gameState.protocol) {
             gameState.protocol[property]['possibleScore'] = -1;

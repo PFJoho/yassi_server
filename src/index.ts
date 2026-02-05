@@ -161,8 +161,12 @@ function lobbyManager(socket: any, room, playerInits) {
    
     console.log("Player 1 has joined lobby", randomRoom);
     socket.emit('lobby entered', {
-      msg: "player1 ready",
+      msg: "me so ready",
       state: gameState,            
+    })
+    io.emit('lobby entered', {
+      msg: "player1 ready",
+      room: room
     })
   } else {
     socket.join(roomobj.room);
@@ -172,6 +176,10 @@ function lobbyManager(socket: any, room, playerInits) {
     socket.emit('lobby entered', {
       msg: "player2 ready",      
       state: gameState,      
+    })
+     io.emit('lobby entered', {
+      msg: "game started",
+      room: room
     })
   }
 }

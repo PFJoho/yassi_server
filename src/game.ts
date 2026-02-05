@@ -220,7 +220,7 @@ export default class GameFunctions {
         if (gameState.playerRound <= gameState.numberOfRounds) {
             gameState.protocol[newcombo][player as keyof DefaultScore] = score;
             gameState.totalScore[player as keyof DefaultScore] += score;
-            gameState.yahtzyFest = newcombo === "yahtzee";
+            gameState.yahtzyFest = newcombo === "yahtzee" && score > 0;
         }
 
         for (const property in gameState.protocol) {
