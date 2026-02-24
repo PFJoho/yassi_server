@@ -89,6 +89,8 @@ io.on('connection', (socket) => {
         const inputId = msg.inputId;
         const score = msg.score;
         gameState = gameFunctions.setScore(gameState, inputId, score, playerId);
+        if (gameState.gameOver)
+            console.log(gameState);
         gameState.diceAreThrown = false;
         gameState.waitingPlayerThrow = true;
         io.emit('update state', gameState);
@@ -119,7 +121,6 @@ function cors() {
 }
 function lobbyManager(socket, room, playerInits) {
     let roomobj = rooms.find((r) => r.name === room);
-    console.log("roomobj", roomobj);
     gameState.gameMode = room === "maxi" ? 4 : room === "straight" ? 2 : 3;
     gameState.numberOfPlayers = 2;
     gameState = gameFunctions.setGameType(gameState);

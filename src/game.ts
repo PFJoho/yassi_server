@@ -54,8 +54,7 @@ export default class GameFunctions {
 
     evaluateDiceResult(gameState: GameState) {
         const player = this.players[gameState.nextPlayer - 1];
-        console.log("player", gameState.nextPlayer);
-
+        
         let dice = gameState.diceList;
 
         const counts = dice.reduce((acc: any, d: any) => {
@@ -226,8 +225,7 @@ export default class GameFunctions {
         for (const property in gameState.protocol) {
             gameState.protocol[property]['possibleScore'] = -1;
         }
-        console.log("gamemode", gameState.gameMode)
-        console.log("input id", inputId)
+        
         if (inputId > 0 && inputId < 7) {
             gameState.benchmarkScore[player] = gameState.benchmarkScore[player] + (gameState.gameMode * inputId);
         }
@@ -253,6 +251,12 @@ export default class GameFunctions {
         if (gameState.nextPlayer === 1) {
             gameState.playerRound += 1;
             gameState.gameOver = gameState.playerRound >= gameState.numberOfRounds;
+        }
+
+        if(gameState.gameOver){           
+            let winner = gameState.protocol.total.player1 > gameState.protocol.total.player2 ? 1 : 2;
+            gameState.winner = winner;
+            gameState.winningScore = gameState.protocol.total[`player${winner}`];
         }
 
         return gameState;
@@ -314,21 +318,6 @@ export default class GameFunctions {
         })
 
         inputs.total[player as keyof DefaultScore] = totalScore;
-
-        let winningScore = 0;
-        let winner = 0;
-
-        this.players.forEach((p, ix) => {
-            if (inputs.total[p] > winningScore) {
-                winningScore = inputs.total[p];
-                winner = ix + 1;
-            }
-        })
-
-        if (gameState.gameOver) {
-            gameState.winner = winner;
-            gameState.winningScore = winningScore;
-        }
 
         return gameState;
     }
